@@ -1,0 +1,5 @@
+{
+  "name": "Painel de Faturamento",
+  "description": "Dashboard de faturamento interativo com análise de dados de planilhas Google e insights via Gemini AI.",
+  "requestFramePermissions": []
+}
