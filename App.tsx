@@ -179,15 +179,15 @@ const App: React.FC = () => {
         })
         .sort((a, b) => a.sortKey.localeCompare(b.sortKey));
 
+    // Exibimos os últimos 12 meses do histórico filtrado
     const last12 = historyArray.slice(-12);
 
     // Dynamic Future Dates Calculation
     const lastDataPoint = last12[last12.length - 1];
     let lastDate = new Date();
     if (lastDataPoint) {
-        // Parse "YYYY-MM" from sortKey
         const [y, m] = lastDataPoint.sortKey.split('-').map(Number);
-        lastDate = new Date(y, m - 1, 1); // Month is 0-indexed in Date
+        lastDate = new Date(y, m - 1, 1); 
     }
 
     const getNextDateLabel = (date: Date, offset: number) => {
@@ -198,13 +198,20 @@ const App: React.FC = () => {
         return `${mName}/${yShort}`;
     };
 
-    const novValue = 925497.34;
+    // --- LOGICA DE PROJEÇÃO DINÂMICA ---
+    // Em vez de um valor fixo, pegamos a média dos últimos 3 meses do contexto ATUAL (filtrado)
+    const recentHistory = last12.slice(-3);
+    const averageBilling = recentHistory.length > 0 
+        ? recentHistory.reduce((acc, curr) => acc + curr.real, 0) / recentHistory.length 
+        : 0;
     
-    // Project next 3 months relative to last real data
+    // Se não houver histórico para os filtros selecionados, o gráfico de projeção também fica vazio
+    if (averageBilling === 0 && last12.length === 0) return [];
+
     const projections = [
-        { name: getNextDateLabel(lastDate, 1), real: 0, projected: novValue },
-        { name: getNextDateLabel(lastDate, 2), real: 0, projected: novValue * 1.02 },
-        { name: getNextDateLabel(lastDate, 3), real: 0, projected: novValue * 0.90 },
+        { name: getNextDateLabel(lastDate, 1), real: 0, projected: averageBilling },
+        { name: getNextDateLabel(lastDate, 2), real: 0, projected: averageBilling * 1.05 }, // Estimamos 5% de sazonalidade positiva
+        { name: getNextDateLabel(lastDate, 3), real: 0, projected: averageBilling * 0.95 }, // Estimamos 5% de sazonalidade negativa
     ];
 
     return [...last12, ...projections];
@@ -277,7 +284,6 @@ const App: React.FC = () => {
 
   // Handle Opening Explanation Modal
   const openExplanation = (type: string, title: string, value: string, desc: string) => {
-    // Construct context
     const context = `
       Faturamento Total da empresa: ${new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(kpis.totalFaturamento)}.
       A empresa tem ${topRoutes.length} rotas ativas.
@@ -324,7 +330,6 @@ const App: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-[#FCFCFE] text-[#0F103A] pb-12 font-sans">
-      {/* --- HEADER --- */}
       <header className="bg-white border-b border-[#E8E8F9] sticky top-0 z-30 shadow-sm">
         <div className="max-w-[1600px] mx-auto px-4 sm:px-6 py-4">
           <div className="flex items-center gap-3">
@@ -340,8 +345,6 @@ const App: React.FC = () => {
       </header>
 
       <main className="max-w-[1600px] mx-auto px-4 sm:px-6 py-6 space-y-6">
-        
-        {/* --- FILTERS SECTION --- */}
         <section className="bg-white rounded-2xl shadow-sm border border-[#E8E8F9] relative z-20">
             <div 
                 className="p-5 flex items-center justify-between cursor-pointer md:cursor-default"
@@ -405,14 +408,12 @@ const App: React.FC = () => {
             </div>
         </section>
         
-        {/* --- KPI CARDS ROW --- */}
         {loading ? (
              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
                 <SkeletonCard /><SkeletonCard /><SkeletonCard /><SkeletonCard />
              </div>
         ) : (
             <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 z-10 relative">
-                {/* LOGIC for Dynamic Cards (same as before) */}
                 {filters.selectedOrigins.length > 0 && filters.selectedDestinations.length === 0 && (
                      <>
                         <StatCard 
@@ -502,14 +503,12 @@ const App: React.FC = () => {
             </section>
         )}
 
-        {/* --- EXPERT INDICATORS SECTION (Clickable) --- */}
         <section className="bg-gradient-to-r from-white to-[#F8F8FC] border border-[#E8E8F9] rounded-xl p-5 shadow-sm z-0 relative">
             <h3 className="text-sm font-bold text-[#0F103A] uppercase tracking-wide mb-4 flex items-center gap-2">
                 <Activity size={18} className="text-[#EC1B23]" />
                 Visão Estratégica (Clique para analisar com IA)
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                
                 <div 
                     onClick={() => openExplanation(
                         "Concentração de Receita", 
@@ -571,13 +570,8 @@ const App: React.FC = () => {
             </div>
         </section>
         
-        {/* --- MAIN CONTENT GRID --- */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 z-0 relative">
-            
-            {/* LEFT COLUMN: Charts & Analysis */}
             <div className="lg:col-span-2 space-y-6">
-                
-                {/* Projection */}
                  {loading ? <SkeletonChart /> : (
                     <div className="bg-white p-5 rounded-xl shadow-sm border border-[#E8E8F9]">
                         <div className="flex items-center justify-between mb-6">
@@ -593,7 +587,6 @@ const App: React.FC = () => {
                     </div>
                 )}
 
-                {/* AI Analysis Section */}
                 <div className="bg-[#0F103A] rounded-xl p-6 text-white shadow-xl relative overflow-hidden border border-[#1A1B62]">
                     <div className="absolute top-0 right-0 p-32 bg-[#2E31B4] rounded-full mix-blend-overlay filter blur-3xl opacity-20 -mr-16 -mt-16"></div>
                     
@@ -624,10 +617,8 @@ const App: React.FC = () => {
                         )}
                     </div>
                 </div>
-
             </div>
 
-            {/* RIGHT COLUMN: Top Routes */}
             <div className="lg:col-span-1 h-full">
                 {loading ? <SkeletonList /> : (
                     <TopRoutes 
@@ -637,11 +628,9 @@ const App: React.FC = () => {
                     />
                 )}
             </div>
-
         </div>
       </main>
 
-      {/* Modals Layer */}
       <RouteDetailsModal 
         isOpen={isRouteModalOpen} 
         onClose={() => setIsRouteModalOpen(false)} 
